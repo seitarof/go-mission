@@ -7,9 +7,7 @@ import (
 	"time"
 
 	"github.com/TechBowl-japan/go-stations/db"
-	"github.com/TechBowl-japan/go-stations/handler"
 	"github.com/TechBowl-japan/go-stations/handler/router"
-	"github.com/TechBowl-japan/go-stations/service"
 )
 
 func main() {
@@ -53,12 +51,11 @@ func realMain() error {
 	// set http handlers
 	mux := router.NewRouter(todoDB)
 
-	srv := service.NewTODOService(todoDB)
-
 	// TODO: ここから実装を行う
-	http.HandleFunc("/healthz", handler.NewHealthzHandler().ServeHTTP)
-	http.HandleFunc("/todos", handler.NewTODOHandler(srv).ServeHTTP)
-	log.Fatal(http.ListenAndServe(port, mux))
+	err = http.ListenAndServe(port, mux)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
