@@ -40,7 +40,6 @@ func (s *TODOService) CreateTODO(ctx context.Context, subject, description strin
 		log.Println(err)
 		return nil, err
 	}
-
 	t.ID = lastInsertId
 	err = s.db.QueryRowContext(ctx, confirm, lastInsertId).Scan(&t.Subject, &t.Description, &t.CreatedAt, &t.UpdatedAt)
 	if err != nil {

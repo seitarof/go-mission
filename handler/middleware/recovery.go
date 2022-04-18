@@ -24,5 +24,5 @@ func Recovery(h http.Handler) http.Handler {
 type PanicHandler struct {}
 
 func (PanicHandler) ServeHTTP(http.ResponseWriter, *http.Request) {
-	panic("--------panic!------")
+	panic("--------panic!--------")
 }

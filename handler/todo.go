@@ -3,13 +3,13 @@ package handler
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"strconv"
 
 	"github.com/TechBowl-japan/go-stations/model"
 	"github.com/TechBowl-japan/go-stations/service"
+	"github.com/mileusna/useragent"
 )
 
 // A TODOHandler implements handling REST endpoints.
@@ -25,6 +25,11 @@ func NewTODOHandler(svc *service.TODOService) *TODOHandler {
 }
 
 func (h *TODOHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// Getting UserAgent Information
+	ua := ua.Parse(r.UserAgent())
+	// Getting OS name
+	ctx := context.WithValue(r.Context(), "OS", ua.OS)
+
 	switch r.Method {
 	case http.MethodGet:
 		var prevId, size string
@@ -47,7 +52,7 @@ func (h *TODOHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		todos, err := h.svc.ReadTODO(r.Context(), int64(prevIdInt), int64(sizeInt))
+		todos, err := h.svc.ReadTODO(ctx, int64(prevIdInt), int64(sizeInt))
 		if err != nil {
 			log.Println(err)
 			return
@@ -56,13 +61,14 @@ func (h *TODOHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		readTodoResponse := &model.ReadTODOResponse {
 			TODOs: todos,
 		}
-		fmt.Println(len(todos))
+
 		w.Header().Add("Content-Type", "application/json")
 		err = json.NewEncoder(w).Encode(readTodoResponse)
 		if err != nil {
 			log.Println(err)
 			return
 		}
+		return
 	case http.MethodPost:
 		var createTodoRequest model.CreateTODORequest
 		err := json.NewDecoder(r.Body).Decode(&createTodoRequest) // Decoding Request-Body
@@ -75,22 +81,24 @@ func (h *TODOHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if createTodoRequest.Subject == "" {
 			w.WriteHeader(http.StatusBadRequest) // 400: Bad Request
 			return
-		} else {
-			todo, err := h.svc.CreateTODO(r.Context(), createTodoRequest.Subject, createTodoRequest.Description)
-			if err != nil {
-				log.Println(err)
-				return
-			}
-			createTodoResponse := &model.CreateTODOResponse{
-				TODO: todo,
-			}
-			fmt.Println("test: ", createTodoResponse.TODO.ID)
-			err = json.NewEncoder(w).Encode(createTodoResponse) // Encoding CreateTODOResponse
-			if err != nil {
-				log.Println(err)
-				return
-			}
 		}
+
+		todo, err := h.svc.CreateTODO(ctx, createTodoRequest.Subject, createTodoRequest.Description)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		createTodoResponse := &model.CreateTODOResponse{
+			TODO: todo,
+		}
+
+		err = json.NewEncoder(w).Encode(createTodoResponse) // Encoding CreateTODOResponse
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		return
 	case http.MethodPut:
 		var updateTodoRequest model.UpdateTODORequest
 		err := json.NewDecoder(r.Body).Decode(&updateTodoRequest) // Decoding Request-Body
@@ -103,55 +111,61 @@ func (h *TODOHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if updateTodoRequest.ID == 0 || updateTodoRequest.Subject == "" {
 			w.WriteHeader(http.StatusBadRequest) // 400: Bad Request
 			return
-		} else {
-			todo, err := h.svc.UpdateTODO(r.Context(), updateTodoRequest.ID, updateTodoRequest.Subject, updateTodoRequest.Description)
-			log.Println(todo)
-			if err != nil {
-				log.Println(err)
-				return
-			}
-			updateTodoResponse := &model.UpdateTODOResponse{
-				TODO: todo,
-			}
-			fmt.Println("test: ", updateTodoResponse.TODO.ID)
-			err = json.NewEncoder(w).Encode(updateTodoResponse) // Encoding UpdateTODOResponse
-			if err != nil {
-				log.Println(err)
-				return
-			}
 		}
+		todo, err := h.svc.UpdateTODO(ctx, updateTodoRequest.ID, updateTodoRequest.Subject, updateTodoRequest.Description)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		updateTodoResponse := &model.UpdateTODOResponse{
+			TODO: todo,
+		}
+
+		err = json.NewEncoder(w).Encode(updateTodoResponse) // Encoding UpdateTODOResponse
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		return
 	case http.MethodDelete:
 		var deleteTodoRequest model.DeleteTODORequest
 		err := json.NewDecoder(r.Body).Decode(&deleteTodoRequest) // Decoding Request-Body
 		defer r.Body.Close()
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadGateway)
+			w.WriteHeader(http.StatusInternalServerError) // 500: Internal Serve Error
+			log.Println(http.StatusText(http.StatusInternalServerError))
 			return
 		}
 
 		if len(deleteTodoRequest.IDs) == 0 {
 			w.WriteHeader(http.StatusBadRequest) // 400: Bad Request
 			return
-		} else {
-			err = h.svc.DeleteTODO(r.Context(), deleteTodoRequest.IDs)
-			if err != nil {
-				switch err.(type) {
-				case *model.ErrNotFound:
-					w.WriteHeader(http.StatusNotFound) // 404: Not Found
-				default:
-					w.WriteHeader(http.StatusBadGateway) // 502: Bad Gateway
-				}
-				return
-			}
-			deleteTodoResponse := &model.DeleteTODOResponse{}
-			err = json.NewEncoder(w).Encode(deleteTodoResponse) // Encoding UpdateTODOResponse
-			if err != nil {
-				log.Println(err)
-				return
-			}
 		}
+
+		err = h.svc.DeleteTODO(ctx, deleteTodoRequest.IDs)
+		if err != nil {
+			switch err.(type) {
+			case *model.ErrNotFound:
+				w.WriteHeader(http.StatusNotFound) // 404: Not Found
+			default:
+				w.WriteHeader(http.StatusBadGateway) // 502: Bad Gateway
+			}
+			return
+		}
+
+		deleteTodoResponse := &model.DeleteTODOResponse{}
+		err = json.NewEncoder(w).Encode(deleteTodoResponse) // Encoding DeleteTODOResponse
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			log.Println(http.StatusText(http.StatusInternalServerError))
+			log.Println(err)
+			return
+		}
+		return
 	default:
-		// do something
+		w.WriteHeader(http.StatusBadRequest)
+		return
 	}
 }
 
