@@ -6,7 +6,9 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 
+	"github.com/TechBowl-japan/go-stations/handler/middleware"
 	"github.com/TechBowl-japan/go-stations/model"
 	"github.com/TechBowl-japan/go-stations/service"
 	"github.com/mileusna/useragent"
@@ -28,7 +30,10 @@ func (h *TODOHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Getting UserAgent Information
 	ua := ua.Parse(r.UserAgent())
 	// Getting OS name
+
 	ctx := context.WithValue(r.Context(), "OS", ua.OS)
+
+	accessTimeBeforeHandler := time.Now()
 
 	switch r.Method {
 	case http.MethodGet:
@@ -68,7 +73,6 @@ func (h *TODOHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			log.Println(err)
 			return
 		}
-		return
 	case http.MethodPost:
 		var createTodoRequest model.CreateTODORequest
 		err := json.NewDecoder(r.Body).Decode(&createTodoRequest) // Decoding Request-Body
@@ -98,7 +102,6 @@ func (h *TODOHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			log.Println(err)
 			return
 		}
-		return
 	case http.MethodPut:
 		var updateTodoRequest model.UpdateTODORequest
 		err := json.NewDecoder(r.Body).Decode(&updateTodoRequest) // Decoding Request-Body
@@ -127,7 +130,6 @@ func (h *TODOHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			log.Println(err)
 			return
 		}
-		return
 	case http.MethodDelete:
 		var deleteTodoRequest model.DeleteTODORequest
 		err := json.NewDecoder(r.Body).Decode(&deleteTodoRequest) // Decoding Request-Body
@@ -162,11 +164,14 @@ func (h *TODOHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			log.Println(err)
 			return
 		}
-		return
 	default:
 		w.WriteHeader(http.StatusBadRequest)
-		return
 	}
+
+	accessTimeAfterHandler := time.Now()
+	accessTimeDiff := accessTimeAfterHandler.Sub(accessTimeBeforeHandler).Microseconds()
+	accessLog := middleware.NewAccessLog(accessTimeBeforeHandler, accessTimeDiff, r.URL.Path, ctx.Value("OS").(string))
+	accessLog.PrintAccessLogJson()
 }
 
 // Create handles the endpoint that creates the TODO.
