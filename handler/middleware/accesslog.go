@@ -22,7 +22,7 @@ func NewAccessLog(timestamp time.Time, latency int64, path, os string) *AccessLo
 	}
 }
 
-func (a *AccessLog) PrintAccessLogJson() {
+func (a *AccessLog) PrintJson() {
 	accessLogJson, err := json.Marshal(a)
 	if err != nil {
 		return

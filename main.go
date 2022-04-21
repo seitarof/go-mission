@@ -48,6 +48,10 @@ func realMain() error {
 	}
 	defer todoDB.Close()
 
+	// set basic-auth info
+	os.Setenv("BASIC_AUTH_USER_ID", "test")
+	os.Setenv("BASIC_AUTH_PASSWORD", "hogehoge")
+
 	// set http handlers
 	mux := router.NewRouter(todoDB)
 

@@ -27,6 +27,13 @@ func NewTODOHandler(svc *service.TODOService) *TODOHandler {
 }
 
 func (h *TODOHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	isOK := middleware.BasicAuth(r)
+	if !isOK {
+		w.Header().Add("WWW-Authenticate", `Basic realm="SECRET AREA"`)
+		w.WriteHeader(http.StatusUnauthorized)
+		http.Error(w, "unauthorized", 401)
+		return
+	}
 	// Getting UserAgent Information
 	ua := ua.Parse(r.UserAgent())
 	// Getting OS name
@@ -171,7 +178,7 @@ func (h *TODOHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	accessTimeAfterHandler := time.Now()
 	accessTimeDiff := accessTimeAfterHandler.Sub(accessTimeBeforeHandler).Microseconds()
 	accessLog := middleware.NewAccessLog(accessTimeBeforeHandler, accessTimeDiff, r.URL.Path, ctx.Value("OS").(string))
-	accessLog.PrintAccessLogJson()
+	accessLog.PrintJson()
 }
 
 // Create handles the endpoint that creates the TODO.
