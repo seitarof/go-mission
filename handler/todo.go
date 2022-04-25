@@ -11,7 +11,7 @@ import (
 	"github.com/TechBowl-japan/go-stations/handler/middleware"
 	"github.com/TechBowl-japan/go-stations/model"
 	"github.com/TechBowl-japan/go-stations/service"
-	"github.com/mileusna/useragent"
+	ua "github.com/mileusna/useragent"
 )
 
 // A TODOHandler implements handling REST endpoints.
@@ -40,7 +40,7 @@ func (h *TODOHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	ctx := context.WithValue(r.Context(), "OS", ua.OS)
 
-	accessTimeBeforeHandler := time.Now()
+	accessTimeBefore := time.Now()
 
 	switch r.Method {
 	case http.MethodGet:
@@ -70,7 +70,7 @@ func (h *TODOHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		readTodoResponse := &model.ReadTODOResponse {
+		readTodoResponse := &model.ReadTODOResponse{
 			TODOs: todos,
 		}
 
@@ -175,9 +175,9 @@ func (h *TODOHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 	}
 
-	accessTimeAfterHandler := time.Now()
-	accessTimeDiff := accessTimeAfterHandler.Sub(accessTimeBeforeHandler).Microseconds()
-	accessLog := middleware.NewAccessLog(accessTimeBeforeHandler, accessTimeDiff, r.URL.Path, ctx.Value("OS").(string))
+	accessTimeAfter := time.Now()
+	accessTimeDiff := accessTimeAfter.Sub(accessTimeBefore).Microseconds()
+	accessLog := middleware.NewAccessLog(accessTimeBefore, accessTimeDiff, r.URL.Path, ctx.Value("OS").(string))
 	accessLog.PrintJson()
 }
 
