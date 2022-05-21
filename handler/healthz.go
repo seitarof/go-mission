@@ -20,7 +20,7 @@ func NewHealthzHandler() *HealthzHandler {
 // ServeHTTP implements http.Handler interface.
 func (h *HealthzHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	log.Println("sleep start")
-	time.Sleep(5 * time.Second)
+	time.Sleep(1 * time.Second)
 	log.Println("sleep done")
 
 	hr := &model.HealthzResponse{ Message: "OK" }

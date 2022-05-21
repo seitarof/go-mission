@@ -6,12 +6,9 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	"time"
 
-	"github.com/TechBowl-japan/go-stations/handler/middleware"
 	"github.com/TechBowl-japan/go-stations/model"
 	"github.com/TechBowl-japan/go-stations/service"
-	ua "github.com/mileusna/useragent"
 )
 
 // A TODOHandler implements handling REST endpoints.
@@ -27,21 +24,6 @@ func NewTODOHandler(svc *service.TODOService) *TODOHandler {
 }
 
 func (h *TODOHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	isOK := middleware.BasicAuth(r)
-	if !isOK {
-		w.Header().Add("WWW-Authenticate", `Basic realm="SECRET AREA"`)
-		w.WriteHeader(http.StatusUnauthorized)
-		http.Error(w, "unauthorized", 401)
-		return
-	}
-	// Getting UserAgent Information
-	ua := ua.Parse(r.UserAgent())
-	// Getting OS name
-
-	ctx := context.WithValue(r.Context(), "OS", ua.OS)
-
-	accessTimeBefore := time.Now()
-
 	switch r.Method {
 	case http.MethodGet:
 		var prevId, size string
@@ -64,7 +46,7 @@ func (h *TODOHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		todos, err := h.svc.ReadTODO(ctx, int64(prevIdInt), int64(sizeInt))
+		todos, err := h.svc.ReadTODO(r.Context(), int64(prevIdInt), int64(sizeInt))
 		if err != nil {
 			log.Println(err)
 			return
@@ -94,7 +76,7 @@ func (h *TODOHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		todo, err := h.svc.CreateTODO(ctx, createTodoRequest.Subject, createTodoRequest.Description)
+		todo, err := h.svc.CreateTODO(r.Context(), createTodoRequest.Subject, createTodoRequest.Description)
 		if err != nil {
 			log.Println(err)
 			return
@@ -122,7 +104,7 @@ func (h *TODOHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest) // 400: Bad Request
 			return
 		}
-		todo, err := h.svc.UpdateTODO(ctx, updateTodoRequest.ID, updateTodoRequest.Subject, updateTodoRequest.Description)
+		todo, err := h.svc.UpdateTODO(r.Context(), updateTodoRequest.ID, updateTodoRequest.Subject, updateTodoRequest.Description)
 		if err != nil {
 			log.Println(err)
 			return
@@ -152,7 +134,7 @@ func (h *TODOHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		err = h.svc.DeleteTODO(ctx, deleteTodoRequest.IDs)
+		err = h.svc.DeleteTODO(r.Context(), deleteTodoRequest.IDs)
 		if err != nil {
 			switch err.(type) {
 			case *model.ErrNotFound:
@@ -174,11 +156,6 @@ func (h *TODOHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	default:
 		w.WriteHeader(http.StatusBadRequest)
 	}
-
-	accessTimeAfter := time.Now()
-	accessTimeDiff := accessTimeAfter.Sub(accessTimeBefore).Microseconds()
-	accessLog := middleware.NewAccessLog(accessTimeBefore, accessTimeDiff, r.URL.Path, ctx.Value("OS").(string))
-	accessLog.PrintJson()
 }
 
 // Create handles the endpoint that creates the TODO.

@@ -53,7 +53,7 @@ func realMain() error {
 
 	// set basic-auth info
 	os.Setenv("BASIC_AUTH_USER_ID", "test")
-	os.Setenv("BASIC_AUTH_PASSWORD", "hogehoge")
+	os.Setenv("BASIC_AUTH_PASSWORD", "4c716d4cf211c7b7d2f3233c941771ad0507ea5bacf93b492766aa41ae9f720d")
 
 	// set http handlers
 	mux := router.NewRouter(todoDB)
@@ -67,6 +67,8 @@ func realMain() error {
 		Addr:    port,
 		Handler: mux,
 	}
+
+	stop()
 
 	go srv.ListenAndServe()
 
