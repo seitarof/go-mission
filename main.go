@@ -68,8 +68,6 @@ func realMain() error {
 		Handler: mux,
 	}
 
-	stop()
-
 	go srv.ListenAndServe()
 
 	<-ctx.Done()
